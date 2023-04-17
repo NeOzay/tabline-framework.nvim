@@ -1,14 +1,26 @@
+---@alias TablineFramework.hl { fg:string, bg:string, gui:string }
+
+---@class TablineFramework.Config
+---@field render fun(t:TablineFramework.struc)
+---@field hl TablineFramework.hl
+---@field hl_sel TablineFramework.hl
+---@field hl_fill TablineFramework.hl
+---@field private data table
 local Config = {data = {}}
 
+---@param t TablineFramework.Config
+---@param tbl? TablineFramework.Config
 Config.new = function(t, tbl) rawset(t, 'data', tbl) end
 
+---@param t TablineFramework.Config
+---@param tbl TablineFramework.Config
 Config.merge = function(t, tbl)
   for k, v in pairs(tbl) do
     rawget(t, 'data')[k] = v
   end
 end
 
-functions = {
+local functions = {
   new = true,
   merge = true
 }

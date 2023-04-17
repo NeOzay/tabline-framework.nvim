@@ -1,3 +1,5 @@
+---@class TablineFramework.Collector
+---@operator call fun():TablineFramework.Collector
 local Collector = {}
 Collector.__index = Collector
 

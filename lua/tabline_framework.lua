@@ -8,6 +8,7 @@ local function make_tabline()
   return Tabline.run(Config.render)
 end
 
+---@param opts TablineFramework.Config
 local function setup(opts)
   opts = opts or {}
 

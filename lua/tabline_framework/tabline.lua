@@ -5,6 +5,8 @@ local functions = require'tabline_framework.functions'
 local Collector = require'tabline_framework.collector'
 local get_icon = require'nvim-web-devicons'.get_icon
 
+---@class TablineFramework.Tabline
+---@field collector TablineFramework.Collector
 local Tabline = {}
 Tabline.__index = Tabline
 
@@ -130,6 +132,8 @@ function Tabline:make_tab_bufs(callback)
   return self:__make_bufs(bufs, callback)
 end
 
+---@param item {[1]:any, fg?:string, bg:string, gui:string}
+---@param closure any
 function Tabline:add(item, closure)
   if type(item) == 'string' then item = { item }
   elseif type(item) == 'number' then item = { string(item) }
@@ -178,6 +182,8 @@ function Tabline:add_btn(item, callback)
   end)
 end
 
+---@param name string? file name
+---@return string? icon
 local function icon(name)
   if not name then return end
   local i = get_icon(name, nil, {default = true})
@@ -191,22 +197,28 @@ local function icon_color(name)
   return hi.get_hl(hl).fg
 end
 
+---@param render_func fun(t:TablineFramework.struc)
+---@return string
 function Tabline:render(render_func)
   local content = {}
 
   functions.clear()
   self:use_tabline_fill_colors()
-
-  render_func({
+  ---@class TablineFramework.struc
+  local struc = {
     icon = icon,
     icon_color = icon_color,
+    ---@param opts TablineFramework.hl
     set_colors = function(opts)
       self.fg = opts.fg or self.fg
       self.bg = opts.bg or self.bg
       self.gui = opts.gui or self.gui
     end,
+    ---@param arg_fg string
     set_fg = function(arg_fg) self.fg = arg_fg or self.fg end,
+    ---@param arg_bg string
     set_bg = function(arg_bg) self.bg = arg_bg or self.bg end,
+    ---@param arg_gui string
     set_gui = function(arg_gui) self.gui = arg_gui or self.gui end,
     add = function(arg) self:add(arg) end,
     add_spacer = function() self:add('%=') end,
@@ -215,7 +227,9 @@ function Tabline:render(render_func)
     close_tab_btn = function(arg) self:close_tab_btn(arg) end,
     add_btn = function(arg, callback) self:add_btn(arg, callback) end,
     -- make_tab_bufs = function(callback) self:make_tab_bufs(callback) end,
-  })
+  }
+
+  render_func(struc)
 
   for _, item in ipairs(self.collector) do
     table.insert(content, ('%%#%s#%s'):format(hi.set_hl(item.fg, item.bg, item.gui), item[1]))
