@@ -5,7 +5,8 @@
 ---@field hl TablineFramework.hl
 ---@field hl_sel TablineFramework.hl
 ---@field hl_fill TablineFramework.hl
----@field private data table
+
+---@type TablineFramework.Config
 local Config = {data = {}}
 
 ---@param t TablineFramework.Config

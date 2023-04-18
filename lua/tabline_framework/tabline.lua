@@ -1,9 +1,9 @@
-local print_warn = require'tabline_framework.helpers'.print_warn
-local Config = require'tabline_framework.config'
-local hi = require'tabline_framework.highlights'
-local functions = require'tabline_framework.functions'
-local Collector = require'tabline_framework.collector'
-local get_icon = require'nvim-web-devicons'.get_icon
+local print_warn = require 'tabline_framework.helpers'.print_warn
+local Config = require 'tabline_framework.config'
+local hi = require 'tabline_framework.highlights'
+local functions = require 'tabline_framework.functions'
+local Collector = require 'tabline_framework.collector'
+local get_icon = require 'nvim-web-devicons'.get_icon
 
 ---@class TablineFramework.Tabline
 ---@field collector TablineFramework.Collector
@@ -30,7 +30,8 @@ function Tabline:use_tabline_fill_colors()
   self.gui = Config.hl_fill.gui
 end
 
-
+---@param callback fun(info:TablineFramework.tab_info)
+---@param list any
 function Tabline:make_tabs(callback, list)
   local tabs = list or vim.api.nvim_list_tabpages()
   for i, v in ipairs(tabs) do
@@ -47,26 +48,28 @@ function Tabline:make_tabs(callback, list)
     local buf = vim.api.nvim_win_get_buf(win)
     local buf_name = vim.api.nvim_buf_get_name(buf)
     local filename = vim.fn.fnamemodify(buf_name, ":t")
-    local modified = vim.api.nvim_buf_get_option(buf, 'modified')
+    local modified = vim.api.nvim_buf_get_option(buf, 'modified') ---@type boolean
 
     self:add('%' .. i .. 'T')
 
     CurrentTab = i
-    callback({
+    ---@class TablineFramework.tab_info
+    local tab_info = {
       before_current = tabs[i + 1] and tabs[i + 1] == current_tab,
       after_current  = tabs[i - 1] and tabs[i - 1] == current_tab,
-      first = i == 1,
-      last = i == #tabs,
-      index = i,
-      tab = v,
-      current = current,
-      win = win,
-      buf = buf,
-      buf_nr = buf,
-      buf_name = buf_name,
-      filename = #filename > 0 and filename or nil,
-      modified = modified,
-    })
+      first          = i == 1,
+      last           = i == #tabs,
+      index          = i,
+      tab            = v,
+      current        = current,
+      win            = win,
+      buf            = buf,
+      buf_nr         = buf,
+      buf_name       = buf_name,
+      filename       = #filename > 0 and filename or nil,
+      modified       = modified,
+    }
+    callback(tab_info)
     CurrentTab = nil
   end
   self:add('%T')
@@ -100,7 +103,7 @@ function Tabline:__make_bufs(buf_list, callback)
 
     callback({
       before_current = bufs[i + 1] and bufs[i + 1] == current_buf,
-      after_current =  bufs[i - 1] and bufs[i - 1] == current_buf,
+      after_current = bufs[i - 1] and bufs[i - 1] == current_buf,
       first = i == 1,
       last = i == #bufs,
       index = i,
@@ -134,9 +137,12 @@ end
 
 ---@param item {[1]:any, fg?:string, bg:string, gui:string}
 ---@param closure any
+---@overload fun(self, item:string|number)
 function Tabline:add(item, closure)
-  if type(item) == 'string' then item = { item }
-  elseif type(item) == 'number' then item = { string(item) }
+  if type(item) == 'string' then
+    item = { item }
+  elseif type(item) == 'number' then
+    item = { string(item) }
   elseif type(item) == 'table' then
     if not item[1] then return end
   else
@@ -186,14 +192,14 @@ end
 ---@return string? icon
 local function icon(name)
   if not name then return end
-  local i = get_icon(name, nil, {default = true})
+  local i = get_icon(name, nil, { default = true })
   return i
 end
 
 local function icon_color(name)
   if not name then return end
 
-  local _, hl = get_icon(name, nil, {default = true})
+  local _, hl = get_icon(name, nil, { default = true })
   return hi.get_hl(hl).fg
 end
 
@@ -220,8 +226,12 @@ function Tabline:render(render_func)
     set_bg = function(arg_bg) self.bg = arg_bg or self.bg end,
     ---@param arg_gui string
     set_gui = function(arg_gui) self.gui = arg_gui or self.gui end,
+    ---@param arg {[1]:any, fg?:string, bg:string, gui:string}
+    ---@overload fun(arg:string|number)
     add = function(arg) self:add(arg) end,
     add_spacer = function() self:add('%=') end,
+    ---@param callback fun(info:TablineFramework.tab_info)
+    ---@param list any
     make_tabs = function(callback, list) self:make_tabs(callback, list) end,
     make_bufs = function(callback, list) self:make_bufs(callback, list) end,
     close_tab_btn = function(arg) self:close_tab_btn(arg) end,

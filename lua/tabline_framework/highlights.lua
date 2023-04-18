@@ -6,6 +6,9 @@ local function clear()
   color_index = 0
 end
 
+---@param fg string
+---@param bg string
+---@param gui string
 local function set_hl(fg, bg, gui)
   if not fg and not bg and not gui then return end
   local key = fg:sub(2) .. '_' .. bg:sub(2) .. (gui or '')
@@ -27,7 +30,7 @@ local function set_hl(fg, bg, gui)
 end
 
 local function get_hl(color)
-  local c = vim.api.nvim_get_hl_by_name(color, true)
+  local c = vim.api.nvim_get_hl(0, {name = color})
   return {
     fg = c.foreground and string.format('#%06x', c.foreground) or 'NONE',
     bg = c.background and string.format('#%06x', c.background) or 'NONE'
