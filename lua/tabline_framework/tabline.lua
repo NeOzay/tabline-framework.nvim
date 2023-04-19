@@ -10,6 +10,8 @@ local get_icon = require 'nvim-web-devicons'.get_icon
 local Tabline = {}
 Tabline.__index = Tabline
 
+---@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:string}|string|number
+
 local CurrentTab
 
 function Tabline:use_tabline_colors()
@@ -78,6 +80,8 @@ function Tabline:make_tabs(callback, list)
   self:add('')
 end
 
+---@param buf_list number[]
+---@param callback fun(info:TablineFramework.buf_info)
 function Tabline:__make_bufs(buf_list, callback)
   local bufs = {}
 
@@ -86,7 +90,6 @@ function Tabline:__make_bufs(buf_list, callback)
       table.insert(bufs, buf)
     end
   end
-
   for i, buf in ipairs(bufs) do
     local current_buf = vim.api.nvim_get_current_buf()
     local current = vim.api.nvim_get_current_buf() == buf
@@ -101,7 +104,8 @@ function Tabline:__make_bufs(buf_list, callback)
     local filename = vim.fn.fnamemodify(buf_name, ":t")
     local modified = vim.api.nvim_buf_get_option(buf, 'modified')
 
-    callback({
+    ---@class TablineFramework.buf_info
+    local buf_info = {
       before_current = bufs[i + 1] and bufs[i + 1] == current_buf,
       after_current = bufs[i - 1] and bufs[i - 1] == current_buf,
       first = i == 1,
@@ -113,7 +117,8 @@ function Tabline:__make_bufs(buf_list, callback)
       buf_name = buf_name,
       filename = #filename > 0 and filename or nil,
       modified = modified,
-    })
+    }
+    callback(buf_info)
   end
 
   self:use_tabline_fill_colors()
@@ -135,9 +140,8 @@ function Tabline:make_tab_bufs(callback)
   return self:__make_bufs(bufs, callback)
 end
 
----@param item {[1]:any, fg?:string, bg:string, gui:string}
----@param closure any
----@overload fun(self, item:string|number)
+---@param item TablineFramework.item
+---@param closure? fun(item)
 function Tabline:add(item, closure)
   if type(item) == 'string' then
     item = { item }
@@ -169,22 +173,31 @@ function Tabline:close_tab_btn(item)
   end)
 end
 
+---@param item TablineFramework.item
+---@param callback any
 function Tabline:add_btn(item, callback)
   if not callback then
     print_warn 'TablineFramework: callback function not provided'
     return
   end
 
-  self:add(item, function(tbl)
-    local name = functions.register(function(minwid, clicks, mouse_btn, modifiers)
-      callback({
+  self:add(item, function(_item)
+    local name = functions.register(
+      ---@param minwid number
+      ---@param clicks number
+      ---@param mouse_btn "r"|"l"
+      ---@param modifiers any
+      function(minwid, clicks, mouse_btn, modifiers)
+      ---@class TablineFramework.ButtonCallback
+      local button = {
         minwid = minwid,
         clicks = clicks,
         mouse_btn = mouse_btn,
         modifiers = modifiers
-      })
+      }
+      callback(button)
     end)
-    tbl[1] = '%@' .. name .. '@' .. tbl[1] .. '%T'
+    _item[1] = '%@' .. name .. '@' .. _item[1] .. '%X'
   end)
 end
 
@@ -226,15 +239,18 @@ function Tabline:render(render_func)
     set_bg = function(arg_bg) self.bg = arg_bg or self.bg end,
     ---@param arg_gui string
     set_gui = function(arg_gui) self.gui = arg_gui or self.gui end,
-    ---@param arg {[1]:any, fg?:string, bg:string, gui:string}
-    ---@overload fun(arg:string|number)
+    ---@param arg TablineFramework.item
     add = function(arg) self:add(arg) end,
     add_spacer = function() self:add('%=') end,
     ---@param callback fun(info:TablineFramework.tab_info)
-    ---@param list any
+    ---@param list? number[]
     make_tabs = function(callback, list) self:make_tabs(callback, list) end,
+    ---@param callback fun(info:TablineFramework.buf_info)
+    ---@param list? number[]
     make_bufs = function(callback, list) self:make_bufs(callback, list) end,
     close_tab_btn = function(arg) self:close_tab_btn(arg) end,
+    ---@param arg TablineFramework.item
+    ---@param callback fun(b:TablineFramework.Collector)
     add_btn = function(arg, callback) self:add_btn(arg, callback) end,
     -- make_tab_bufs = function(callback) self:make_tab_bufs(callback) end,
   }
