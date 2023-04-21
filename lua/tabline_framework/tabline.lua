@@ -10,9 +10,10 @@ local get_icon = require 'nvim-web-devicons'.get_icon
 local Tabline = {}
 Tabline.__index = Tabline
 
----@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:string}|string|number
+---@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:table<string, boolean>}
 
 local CurrentTab
+local ActualBuf = { default_callback = nil, buf_nr = nil }
 
 function Tabline:use_tabline_colors()
   self.fg = Config.hl.fg
@@ -93,7 +94,15 @@ function Tabline:__make_bufs(buf_list, callback)
   for i, buf in ipairs(bufs) do
     local current_buf = vim.api.nvim_get_current_buf()
     local current = vim.api.nvim_get_current_buf() == buf
+    ActualBuf.buf_nr = buf
 
+    ActualBuf.default_callback = functions.register(function()
+      vim.api.nvim_set_current_buf(buf)
+    end)
+
+    ActualBuf.closure = function(_item)
+      _item[1] = '%@' .. ActualBuf.default_callback .. '@' .. _item[1] .. '%X'
+    end
     if current then
       self:use_tabline_sel_colors()
     else
@@ -119,6 +128,7 @@ function Tabline:__make_bufs(buf_list, callback)
       modified = modified,
     }
     callback(buf_info)
+    ActualBuf = {}
   end
 
   self:use_tabline_fill_colors()
@@ -140,9 +150,12 @@ function Tabline:make_tab_bufs(callback)
   return self:__make_bufs(bufs, callback)
 end
 
----@param item TablineFramework.item
+---@param item TablineFramework.item|number|string
 ---@param closure? fun(item)
 function Tabline:add(item, closure)
+  if ActualBuf.default_callback and not closure then
+    closure = ActualBuf.closure
+  end
   if type(item) == 'string' then
     item = { item }
   elseif type(item) == 'number' then
@@ -173,7 +186,7 @@ function Tabline:close_tab_btn(item)
   end)
 end
 
----@param item TablineFramework.item
+---@param item TablineFramework.item|number|string
 ---@param callback any
 function Tabline:add_btn(item, callback)
   if not callback then
@@ -183,20 +196,20 @@ function Tabline:add_btn(item, callback)
 
   self:add(item, function(_item)
     local name = functions.register(
-      ---@param minwid number
-      ---@param clicks number
-      ---@param mouse_btn "r"|"l"
-      ---@param modifiers any
+    ---@param minwid number
+    ---@param clicks number
+    ---@param mouse_btn "r"|"l"
+    ---@param modifiers any
       function(minwid, clicks, mouse_btn, modifiers)
-      ---@class TablineFramework.ButtonCallback
-      local button = {
-        minwid = minwid,
-        clicks = clicks,
-        mouse_btn = mouse_btn,
-        modifiers = modifiers
-      }
-      callback(button)
-    end)
+        ---@class TablineFramework.ButtonCallback
+        local button = {
+          minwid = minwid,
+          clicks = clicks,
+          mouse_btn = mouse_btn,
+          modifiers = modifiers
+        }
+        callback(button)
+      end)
     _item[1] = '%@' .. name .. '@' .. _item[1] .. '%X'
   end)
 end
@@ -216,14 +229,14 @@ local function icon_color(name)
   return hi.get_hl(hl).fg
 end
 
----@param render_func fun(t:TablineFramework.struc)
+---@param render_func fun(t:TablineFramework.renderTable)
 ---@return string
 function Tabline:render(render_func)
   local content = {}
 
   functions.clear()
   self:use_tabline_fill_colors()
-  ---@class TablineFramework.struc
+  ---@class TablineFramework.renderTable
   local struc = {
     icon = icon,
     icon_color = icon_color,
@@ -237,9 +250,9 @@ function Tabline:render(render_func)
     set_fg = function(arg_fg) self.fg = arg_fg or self.fg end,
     ---@param arg_bg string
     set_bg = function(arg_bg) self.bg = arg_bg or self.bg end,
-    ---@param arg_gui string
+    ---@param arg_gui table<string, boolean>
     set_gui = function(arg_gui) self.gui = arg_gui or self.gui end,
-    ---@param arg TablineFramework.item
+    ---@param arg TablineFramework.item|number|string
     add = function(arg) self:add(arg) end,
     add_spacer = function() self:add('%=') end,
     ---@param callback fun(info:TablineFramework.tab_info)
@@ -249,8 +262,8 @@ function Tabline:render(render_func)
     ---@param list? number[]
     make_bufs = function(callback, list) self:make_bufs(callback, list) end,
     close_tab_btn = function(arg) self:close_tab_btn(arg) end,
-    ---@param arg TablineFramework.item
-    ---@param callback fun(b:TablineFramework.Collector)
+    ---@param arg TablineFramework.item|number|string
+    ---@param callback fun(b:TablineFramework.ButtonCallback)
     add_btn = function(arg, callback) self:add_btn(arg, callback) end,
     -- make_tab_bufs = function(callback) self:make_tab_bufs(callback) end,
   }

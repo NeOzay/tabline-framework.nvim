@@ -1,7 +1,7 @@
 ---@alias TablineFramework.hl { fg:string, bg:string, gui:string }
 
 ---@class TablineFramework.Config
----@field render fun(t:TablineFramework.struc)
+---@field render fun(t:TablineFramework.renderTable)
 ---@field hl TablineFramework.hl
 ---@field hl_sel TablineFramework.hl
 ---@field hl_fill TablineFramework.hl

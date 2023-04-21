@@ -8,10 +8,19 @@ end
 
 ---@param fg string
 ---@param bg string
----@param gui string
+---@param gui? table<string, boolean>
 local function set_hl(fg, bg, gui)
   if not fg and not bg and not gui then return end
-  local key = fg:sub(2) .. '_' .. bg:sub(2) .. (gui or '')
+  local function tostringGui(t)
+    local sort = {}
+    for key, value in pairs(t or {}) do
+      table.insert(sort, key)
+    end
+    table.sort(sort)
+    print(table.concat(sort,","))
+    return table.concat(sort,",")
+  end
+  local key = fg:sub(2) .. '_' .. bg:sub(2) .. (gui and tostringGui(gui) or "")
 
   if colors[key] then return colors[key] end
 
@@ -19,18 +28,23 @@ local function set_hl(fg, bg, gui)
   local group = 'TablineFramework_' .. color_index
   colors[key] = group
 
-  local cmd = ('highlight %s guifg=%s guibg=%s gui=%s'):format(
-    group,
-    fg or 'NONE',
-    bg or 'NONE',
-    gui or 'NONE'
-  )
-  vim.api.nvim_command(cmd)
+  -- local cmd = ('highlight %s guifg=%s guibg=%s gui=%s'):format(
+  --   group,
+  --   fg or 'NONE',
+  --   bg or 'NONE',
+  --   gui or 'NONE'
+  -- )
+  local val = vim.tbl_extend("keep", {
+    fg = fg,
+    bg = bg,
+  }, gui or {})
+  vim.api.nvim_set_hl(0, group, val)
+  --vim.api.nvim_command(cmd)
   return group
 end
 
 local function get_hl(color)
-  local c = vim.api.nvim_get_hl(0, {name = color})
+  local c = vim.api.nvim_get_hl(0, { name = color })
   return {
     fg = c.fg and string.format('#%06x', c.fg) or 'NONE',
     bg = c.bg and string.format('#%06x', c.bg) or 'NONE'
