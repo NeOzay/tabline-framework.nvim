@@ -10,7 +10,7 @@ local get_icon = require 'nvim-web-devicons'.get_icon
 local Tabline = {}
 Tabline.__index = Tabline
 
----@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:table<string, boolean>}
+---@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:table<string, boolean>, closure?:fun(item:TablineFramework.item)}
 
 local CurrentTab
 local ActualBuf = { default_callback = nil, buf_nr = nil }
@@ -96,12 +96,11 @@ function Tabline:__make_bufs(buf_list, callback)
     local current = vim.api.nvim_get_current_buf() == buf
     ActualBuf.buf_nr = buf
 
-    ActualBuf.default_callback = functions.register(function()
+    local default_callback = functions.register(function()
       vim.api.nvim_set_current_buf(buf)
     end)
-
     ActualBuf.closure = function(_item)
-      _item[1] = '%@' .. ActualBuf.default_callback .. '@' .. _item[1] .. '%X'
+      _item[1] = '%@' .. default_callback .. '@' .. _item[1] .. '%X'
     end
     if current then
       self:use_tabline_sel_colors()
@@ -151,9 +150,9 @@ function Tabline:make_tab_bufs(callback)
 end
 
 ---@param item TablineFramework.item|number|string
----@param closure? fun(item)
+---@param closure? fun(item:TablineFramework.item)
 function Tabline:add(item, closure)
-  if ActualBuf.default_callback and not closure then
+  if ActualBuf.closure and not closure then
     closure = ActualBuf.closure
   end
   if type(item) == 'string' then
@@ -166,11 +165,10 @@ function Tabline:add(item, closure)
     return
   end
 
-  if closure then closure(item) end
-
   item.fg = item.fg or self.fg
   item.bg = item.bg or self.bg
   item.gui = item.gui or self.gui
+  item.closure = closure
 
   self.collector:add(item)
 end
@@ -270,8 +268,9 @@ function Tabline:render(render_func)
 
   render_func(struc)
 
-  for _, item in ipairs(self.collector) do
-    table.insert(content, ('%%#%s#%s'):format(hi.set_hl(item.fg, item.bg, item.gui), item[1]))
+  for _, item in ipairs(self.collector) do ---@cast item TablineFramework.item
+    local text = item.closure and item.closure(item) or item[1]
+    table.insert(content, ('%%#%s#%s'):format(hi.set_hl(item.fg, item.bg, item.gui), text))
   end
 
   return table.concat(content)

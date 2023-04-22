@@ -17,7 +17,6 @@ local function set_hl(fg, bg, gui)
       table.insert(sort, key)
     end
     table.sort(sort)
-    print(table.concat(sort,","))
     return table.concat(sort,",")
   end
   local key = fg:sub(2) .. '_' .. bg:sub(2) .. (gui and tostringGui(gui) or "")
