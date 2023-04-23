@@ -28,6 +28,12 @@ local function setup(opts)
 
   Config:merge(opts)
 
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    callback = function ()
+      hi.clear()
+    end
+  })
+
   vim.opt.tabline = [[%!v:lua.require'tabline_framework'.make_tabline()]]
 end
 

@@ -13,7 +13,11 @@ Tabline.__index = Tabline
 ---@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:table<string, boolean>, closure?:fun(item:TablineFramework.item)}
 
 local CurrentTab
-local ActualBuf = { default_callback = nil, buf_nr = nil }
+---@type {item_list:{[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}, default_callback?:string}?
+local ActualBuf = { default_callback = nil, item_list = {} }
+local function reset_actualBuf()
+  ActualBuf = { default_callback = nil, item_list = {} }
+end
 
 function Tabline:use_tabline_colors()
   self.fg = Config.hl.fg
@@ -85,6 +89,7 @@ end
 ---@param callback fun(info:TablineFramework.buf_info)
 function Tabline:__make_bufs(buf_list, callback)
   local bufs = {}
+  _G.tabBuf_list = {} ---@type TablineFramework.item[][]
 
   for _, buf in ipairs(buf_list) do
     if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_option(buf, 'buflisted') then
@@ -92,9 +97,10 @@ function Tabline:__make_bufs(buf_list, callback)
     end
   end
   for i, buf in ipairs(bufs) do
+    reset_actualBuf()
+    ---@cast ActualBuf -?
     local current_buf = vim.api.nvim_get_current_buf()
     local current = vim.api.nvim_get_current_buf() == buf
-    ActualBuf.buf_nr = buf
 
     local default_callback = functions.register(function()
       vim.api.nvim_set_current_buf(buf)
@@ -102,6 +108,7 @@ function Tabline:__make_bufs(buf_list, callback)
     ActualBuf.closure = function(_item)
       _item[1] = '%@' .. default_callback .. '@' .. _item[1] .. '%X'
     end
+
     if current then
       self:use_tabline_sel_colors()
     else
@@ -127,9 +134,10 @@ function Tabline:__make_bufs(buf_list, callback)
       modified = modified,
     }
     callback(buf_info)
-    ActualBuf = {}
+    ActualBuf.item_list.buf_info = buf_info
+    table.insert(tabBuf_list, ActualBuf.item_list)
   end
-
+  ActualBuf = nil
   self:use_tabline_fill_colors()
   self:add('')
 end
@@ -152,9 +160,6 @@ end
 ---@param item TablineFramework.item|number|string
 ---@param closure? fun(item:TablineFramework.item)
 function Tabline:add(item, closure)
-  if ActualBuf.closure and not closure then
-    closure = ActualBuf.closure
-  end
   if type(item) == 'string' then
     item = { item }
   elseif type(item) == 'number' then
@@ -163,6 +168,12 @@ function Tabline:add(item, closure)
     if not item[1] then return end
   else
     return
+  end
+  if ActualBuf and not closure then
+    closure = ActualBuf.closure
+  end
+  if ActualBuf and ActualBuf.item_list then
+    table.insert(ActualBuf.item_list, item)
   end
 
   item.fg = item.fg or self.fg
