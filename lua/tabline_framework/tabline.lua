@@ -13,7 +13,9 @@ Tabline.__index = Tabline
 ---@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:table<string, boolean>, closure?:fun(item:TablineFramework.item)}
 
 local CurrentTab
----@type {item_list:{[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}, default_callback?:string}?
+---@alias TablineFramework.ActualBuf {item_list:{[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}, default_callback?:string}?
+
+---@type TablineFramework.ActualBuf
 local ActualBuf = { default_callback = nil, item_list = {} }
 local function reset_actualBuf()
   ActualBuf = { default_callback = nil, item_list = {} }
@@ -89,13 +91,13 @@ end
 ---@param callback fun(info:TablineFramework.buf_info)
 function Tabline:__make_bufs(buf_list, callback)
   local bufs = {}
-  _G.tabBuf_list = {} ---@type TablineFramework.item[][]
-
+  local tabBuf_list = {} ---@type TablineFramework.ActualBuf[]
   for _, buf in ipairs(buf_list) do
     if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_option(buf, 'buflisted') then
       table.insert(bufs, buf)
     end
   end
+
   for i, buf in ipairs(bufs) do
     reset_actualBuf()
     ---@cast ActualBuf -?
@@ -169,6 +171,7 @@ function Tabline:add(item, closure)
   else
     return
   end
+
   if ActualBuf and not closure then
     closure = ActualBuf.closure
   end
