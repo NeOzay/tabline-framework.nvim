@@ -6,7 +6,8 @@
 ---@field hl_sel TablineFramework.hl
 ---@field hl_fill TablineFramework.hl
 ---@field buflist_size number
----@field
+---@field max number
+---@field min number
 
 ---@type TablineFramework.Config
 local Config = {data = {}}

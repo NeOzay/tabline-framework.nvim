@@ -10,7 +10,7 @@ local get_icon = require 'nvim-web-devicons'.get_icon
 local Tabline = {}
 Tabline.__index = Tabline
 
----@alias TablineFramework.item {[1]:any, fg?:string, bg:string, gui:table<string, boolean>, closure?:fun(item:TablineFramework.item)}
+---@alias TablineFramework.item {[1]:string, fg?:string, bg:string, gui:table<string, boolean>, closure?:fun(item:TablineFramework.item)}
 
 local CurrentTab
 ---@alias TablineFramework.ActualBuf {item_list:{[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}, default_callback?:string}?
@@ -87,11 +87,53 @@ function Tabline:make_tabs(callback, list)
   self:add('')
 end
 
+---@param item_list TablineFramework.item[]
+local function get_bufSize(item_list)
+  local size = 0
+  for index, item in ipairs(item_list) do
+    size = size + #item[1]
+  end
+  return size
+end
+
+---@param buflist {[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}[]
+local function get_buflineSize(buflist)
+  local size = 0
+  for index, buf in ipairs(buflist) do
+    size = size + get_bufSize(buf)
+  end
+  return size
+end
+
+---@param tablist {[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}[]
+local function ajust_bufline(tablist)
+  local current_buf_index
+  for index, buf in ipairs(tablist) do
+    if buf.buf_info.current then
+      current_buf_index = index
+    end
+    for _, item in ipairs(buf) do
+      if #item[1] > Config.max then
+        item[1] = "󰩮"..item[1]:sub(-Config.max+1)
+      end
+    end
+  end
+  print(get_buflineSize(tablist), Config.max)
+  local check = {}
+  local sort_tab = {}
+  for i = 1, math.abs(current_buf_index - #tablist) do
+    --table.insert(sort_tab, )
+  end
+  local current_size = 0
+  for key, value in pairs(t) do
+    
+  end
+end
 ---@param buf_list number[]
 ---@param callback fun(info:TablineFramework.buf_info)
 function Tabline:__make_bufs(buf_list, callback)
   local bufs = {}
-  local tabBuf_list = {} ---@type TablineFramework.ActualBuf[]
+  local tab_list = {} ---@type {[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}[]
   for _, buf in ipairs(buf_list) do
     if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_option(buf, 'buflisted') then
       table.insert(bufs, buf)
@@ -137,9 +179,10 @@ function Tabline:__make_bufs(buf_list, callback)
     }
     callback(buf_info)
     ActualBuf.item_list.buf_info = buf_info
-    table.insert(tabBuf_list, ActualBuf.item_list)
+    table.insert(tab_list, ActualBuf.item_list)
+    ActualBuf = nil
   end
-  ActualBuf = nil
+  ajust_bufline(tab_list)
   self:use_tabline_fill_colors()
   self:add('')
 end
@@ -175,7 +218,7 @@ function Tabline:add(item, closure)
   if ActualBuf and not closure then
     closure = ActualBuf.closure
   end
-  if ActualBuf and ActualBuf.item_list then
+  if ActualBuf  then
     table.insert(ActualBuf.item_list, item)
   end
 
