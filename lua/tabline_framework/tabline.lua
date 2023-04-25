@@ -107,26 +107,38 @@ end
 
 ---@param tablist {[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}[]
 local function ajust_bufline(tablist)
-  local current_buf_index
+  local current_buf_index = 0
   for index, buf in ipairs(tablist) do
     if buf.buf_info.current then
       current_buf_index = index
     end
     for _, item in ipairs(buf) do
       if #item[1] > Config.max then
-        item[1] = "󰩮"..item[1]:sub(-Config.max+1)
+        item[1] = "󰩮" .. item[1]:sub(-Config.max + 1)
       end
     end
   end
-  print(get_buflineSize(tablist), Config.max)
   local check = {}
-  local sort_tab = {}
-  for i = 1, math.abs(current_buf_index - #tablist) do
-    --table.insert(sort_tab, )
+  local function f(x)
+    return math.floor((x / 2) * ((-1) ^ x))
+  end
+  sort_tab = {}
+  local border =  false
+  for x = 1, #tablist*2 do
+    local index = current_buf_index + f(x)
+    if tablist[index] then
+      table.insert(sort_tab, tablist[index])
+      border = false
+    else
+      if border then
+        return
+      end
+      border = true
+    end
   end
   local current_size = 0
-  for key, value in pairs(t) do
-    
+  for key, value in pairs(tablist) do
+
   end
 end
 ---@param buf_list number[]
@@ -208,7 +220,7 @@ function Tabline:add(item, closure)
   if type(item) == 'string' then
     item = { item }
   elseif type(item) == 'number' then
-    item = { string(item) }
+    item = { tostring(item) }
   elseif type(item) == 'table' then
     if not item[1] then return end
   else
@@ -218,7 +230,7 @@ function Tabline:add(item, closure)
   if ActualBuf and not closure then
     closure = ActualBuf.closure
   end
-  if ActualBuf  then
+  if ActualBuf then
     table.insert(ActualBuf.item_list, item)
   end
 
