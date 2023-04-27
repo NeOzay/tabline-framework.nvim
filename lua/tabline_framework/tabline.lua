@@ -5,6 +5,9 @@ local functions = require 'tabline_framework.functions'
 local Collector = require 'tabline_framework.collector'
 local get_icon = require 'nvim-web-devicons'.get_icon
 
+local strwidth = vim.api.nvim_strwidth
+local strcharpart = vim.fn.strcharpart
+
 ---@class TablineFramework.Tabline
 ---@field collector TablineFramework.Collector
 local Tabline = {}
@@ -91,7 +94,7 @@ end
 local function get_bufSize(item_list)
   local size = 0
   for index, item in ipairs(item_list) do
-    size = size + #item[1]
+    size = size + strwidth(item[1])
   end
   return size
 end
@@ -106,41 +109,76 @@ local function get_buflineSize(buflist)
 end
 
 ---@param tablist {[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}[]
-local function ajust_bufline(tablist)
-  local current_buf_index = 0
+function Tabline:ajust_bufline(tablist)
+  local current_tab_index = 0
   for index, buf in ipairs(tablist) do
     if buf.buf_info.current then
-      current_buf_index = index
+      current_tab_index = index
     end
     for _, item in ipairs(buf) do
-      if #item[1] > Config.max then
-        item[1] = "󰩮" .. item[1]:sub(-Config.max + 1)
+      local str_width = strwidth(item[1])
+      if str_width > Config.max then
+        item[1] = "󰩮" .. strcharpart(item[1], str_width - Config.max , str_width)
       end
     end
   end
-  local check = {}
   local function f(x)
-    return math.floor((x / 2) * ((-1) ^ x))
+    return math.floor(math.floor(x / 2) * ((-1) ^ x))
   end
-  sort_tab = {}
-  local border =  false
-  for x = 1, #tablist*2 do
-    local index = current_buf_index + f(x)
+  sort_tab = {} ---@type {[number]:TablineFramework.item, buf_info:TablineFramework.buf_info}[]
+  local border = false
+  for x = 1, #tablist * 2 do
+    local index = current_tab_index + f(x)
     if tablist[index] then
       table.insert(sort_tab, tablist[index])
       border = false
     else
       if border then
-        return
+        break
       end
       border = true
     end
   end
-  local current_size = 0
-  for key, value in pairs(tablist) do
 
+  local free_space = Config.buflist_size
+  for index, tab in ipairs(sort_tab) do
+    if free_space < 0 then
+      for _, item in ipairs(tab) do
+        self.collector:remove(item)
+      end
+    else
+      local buf_size = get_bufSize(tab)
+
+      free_space = free_space - buf_size
+      if free_space < 0 then
+        free_space = free_space + buf_size
+        if tab.buf_info.index < current_tab_index then
+          local reverse_tab = {buf_info = tab.buf_info}
+          for i = #tab, 1, -1 do
+            table.insert(reverse_tab, tab[i])
+          end
+          tab = reverse_tab
+        end
+        for i, item in ipairs(tab) do
+          if free_space < 0 then
+            self.collector:remove(item)
+          else
+            free_space = free_space - strwidth(item[1])
+            if free_space < 0 then
+              --print(item[1])
+              if tab.buf_info.index > current_tab_index then
+                item[1] = strcharpart(item[1], 0, strwidth(item[1])+free_space)
+              else
+                item[1] = strcharpart(item[1], -free_space)
+              end
+            end
+          end
+        end
+      end
+    end
   end
 end
+
 ---@param buf_list number[]
 ---@param callback fun(info:TablineFramework.buf_info)
 function Tabline:__make_bufs(buf_list, callback)
@@ -194,7 +232,7 @@ function Tabline:__make_bufs(buf_list, callback)
     table.insert(tab_list, ActualBuf.item_list)
     ActualBuf = nil
   end
-  ajust_bufline(tab_list)
+  self:ajust_bufline(tab_list)
   self:use_tabline_fill_colors()
   self:add('')
 end
