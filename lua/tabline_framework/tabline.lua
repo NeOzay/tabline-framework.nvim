@@ -118,7 +118,7 @@ function Tabline:ajust_bufline(tablist)
     for _, item in ipairs(buf) do
       local str_width = strwidth(item[1])
       if str_width > Config.max then
-        item[1] = "󰩮" .. strcharpart(item[1], str_width - Config.max , str_width)
+        item[1] = "󰩮" .. strcharpart(item[1], str_width - Config.max + 1 , str_width)
       end
     end
   end
