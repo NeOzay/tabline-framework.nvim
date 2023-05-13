@@ -27,18 +27,11 @@ local function set_hl(fg, bg, gui)
   local group = 'TablineFramework_' .. color_index
   colors[key] = group
 
-  -- local cmd = ('highlight %s guifg=%s guibg=%s gui=%s'):format(
-  --   group,
-  --   fg or 'NONE',
-  --   bg or 'NONE',
-  --   gui or 'NONE'
-  -- )
   local val = vim.tbl_extend("keep", {
     fg = fg,
     bg = bg,
   }, gui or {})
   vim.api.nvim_set_hl(0, group, val)
-  --vim.api.nvim_command(cmd)
   return group
 end
 

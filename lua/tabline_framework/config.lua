@@ -1,4 +1,4 @@
----@alias TablineFramework.hl { fg:string, bg:string, gui:string }
+---@alias TablineFramework.hl { fg:string, bg:string, gui:table<string, true> }
 
 ---@class TablineFramework.Config
 ---@field render fun(t:TablineFramework.renderTable)
